@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>US Passenger Rail Modernization — Kinetic Slide Experience</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+    * {
+      box-sizing: border-box;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      overflow: hidden;
+      user-select: none;
+      background: #090d16;
+    }
+
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Track motion animation */
+    @keyframes trackScroll {
+      from { transform: translateX(0); }
+      to { transform: translateX(-160px); }
+    }
+
+    .animate-track {
+      animation: trackScroll 0.8s linear infinite;
+    }
+    .animate-track-fast {
+      animation: trackScroll 0.4s linear infinite;
+    }
+    .animate-track-slow {
+      animation: trackScroll 2.2s linear infinite;
+    }
+
+    /* Smooth physics cubic beziers */
+    .train-physics {
+      transition: transform 1.2s cubic-bezier(0.22, 1, 0.36, 1), left 1.2s cubic-bezier(0.22, 1, 0.36, 1), bottom 0.8s ease;
+      will-change: transform, left, bottom;
+    }
+
+    /* Subtle train suspension vibration during high speed instead of disorienting wheel spin */
+    @keyframes subtleVibe {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-0.8px); }
+    }
+
+    .train-cruising {
+      animation: subtleVibe 0.12s ease-in-out infinite;
+    }
+
+    .scene-physics {
+      transition: transform 1.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.8s ease;
+      will-change: transform, opacity;
+    }
+
+    /* Glassmorphism Cards */
+    .glass-deck {
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.18), 0 0 1px 1px rgba(255, 255, 255, 0.9);
+    }
+
+    .glass-deck-dark {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Staggered slide reveal animations */
+    .slide-stage {
+      opacity: 0;
+      transform: translateY(30px) scale(0.97);
+      transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .slide-stage.active {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+
+    .stagger-item {
+      opacity: 0;
+      transform: translateY(18px);
+      transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .slide-stage.active .stagger-item {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .slide-stage.active .stagger-item:nth-child(1) { transition-delay: 0.15s; }
+    .slide-stage.active .stagger-item:nth-child(2) { transition-delay: 0.25s; }
+    .slide-stage.active .stagger-item:nth-child(3) { transition-delay: 0.35s; }
+    .slide-stage.active .stagger-item:nth-child(4) { transition-delay: 0.45s; }
+
+    /* Speed streaks */
+    @keyframes streakFx {
+      0% { transform: translateX(120vw); opacity: 0; }
+      20% { opacity: 0.9; }
+      80% { opacity: 0.9; }
+      100% { transform: translateX(-40vw); opacity: 0; }
+    }
+    .streak {
+      animation: streakFx 0.7s linear infinite;
+    }
+
+    /* Catenary overhead power sparks */
+    @keyframes sparkFx {
+      0%, 100% { opacity: 0; }
+      50% { opacity: 0.85; transform: scale(1.4); }
+    }
+    .pantograph-spark {
+      animation: sparkFx 0.4s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body class="w-screen h-screen flex flex-col justify-between antialiased relative overflow-hidden select-none">
+
+  <!-- ================= TOP HUD & CONTROLS ================= -->
+  <header class="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4">
+    <!-- Brand / Topic -->
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-red-600 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-red-500/25 text-lg">
+        🚆
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] font-mono tracking-widest uppercase font-black text-red-400 bg-red-950/60 px-2 py-0.5 rounded border border-red-500/30">
+            High-Speed Kinetic Deck
+          </span>
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+        </div>
+        <h1 class="text-sm font-bold text-white tracking-tight" id="headerTitle">US Passenger Train Lines</h1>
+      </div>
+    </div>
+
+    <!-- Telemetry Display (Velocity & Location) -->
+    <div class="hidden md:flex items-center gap-6 bg-slate-900/80 border border-slate-700/60 px-5 py-2.5 rounded-2xl backdrop-blur-xl shadow-xl">
+      <!-- Speedometer -->
+      <div class="flex items-center gap-3">
+        <span class="text-[11px] font-mono text-slate-400 font-medium">SPEED</span>
+        <div class="flex items-baseline gap-1">
+          <span id="speedValue" class="text-xl font-mono font-black text-white">0</span>
+          <span class="text-[10px] font-mono text-amber-400 font-bold">MPH</span>
+        </div>
+        <div class="w-20 h-2 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700">
+          <div id="speedBar" class="h-full bg-gradient-to-r from-amber-400 to-red-500 rounded-full w-0 transition-all duration-700"></div>
+        </div>
+      </div>
+      <span class="w-px h-5 bg-slate-700"></span>
+      <!-- Mode Badge -->
+      <div class="flex items-center gap-2">
+        <span class="text-[11px] font-mono text-slate-400">CORRIDOR</span>
+        <span id="corridorBadge" class="text-xs font-mono font-bold text-cyan-400 px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-800/60">
+          STATION IDLE
+        </span>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex items-center gap-2.5">
+      <!-- Audio Toggle -->
+      <button id="soundBtn" class="px-3.5 py-2 rounded-xl bg-slate-900/80 border border-slate-700/70 text-xs font-medium text-slate-300 hover:text-white hover:border-slate-500 transition-all flex items-center gap-2 backdrop-blur-md cursor-pointer">
+        <span id="soundIcon">🔇</span>
+        <span class="hidden sm:inline" id="soundLabel">Muted</span>
+      </button>
+
+      <!-- Speaker Notes / Overview Toggle -->
+      <button id="notesBtn" class="px-3.5 py-2 rounded-xl bg-slate-900/80 border border-slate-700/70 text-xs font-medium text-slate-300 hover:text-white hover:border-slate-500 transition-all flex items-center gap-2 backdrop-blur-md cursor-pointer">
+        <span>📋</span>
+        <span class="hidden sm:inline">Presenter Notes</span>
+      </button>
+
+      <!-- Fullscreen Toggle -->
+      <button id="fullscreenBtn" class="px-3.5 py-2 rounded-xl bg-slate-900/80 border border-slate-700/70 text-xs font-medium text-slate-300 hover:text-white hover:border-slate-500 transition-all flex items-center gap-2 backdrop-blur-md cursor-pointer">
+        <span>⛶</span>
+        <span class="hidden sm:inline">Fullscreen</span>
+      </button>
+    </div>
+  </header>
+
+
+  <!-- ================= DYNAMIC PARALLAX ENVIRONMENT ================= -->
+  <div class="relative w-full h-full flex flex-col justify-end overflow-hidden" id="worldStage">
+
+    <!-- Sky Layer (Changes colors across sunset, noon, night) -->
+    <div id="skyDome" class="absolute inset-0 transition-all duration-1000 ease-out bg-gradient-to-b from-[#9bb1be] via-[#c6d7e2] to-[#e4edf2]"></div>
+
+    <!-- Sun / Moon Lighting -->
+    <div id="celestialBody" class="absolute top-16 right-28 w-24 h-24 rounded-full bg-gradient-to-br from-amber-200 to-amber-100/30 blur-sm pointer-events-none transition-all duration-1000"></div>
+
+    <!-- Speed streaks layer (active when moving fast) -->
+    <div id="speedStreaksLayer" class="absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-300 overflow-hidden z-20">
+      <div class="streak absolute top-1/4 h-[2px] w-64 bg-white/70 rounded-full" style="animation-duration: 0.5s;"></div>
+      <div class="streak absolute top-1/3 h-[3px] w-96 bg-cyan-300/80 rounded-full" style="animation-duration: 0.4s; animation-delay: 0.1s;"></div>
+      <div class="streak absolute top-2/3 h-[2px] w-80 bg-red-400/80 rounded-full" style="animation-duration: 0.6s; animation-delay: 0.25s;"></div>
+      <div class="streak absolute top-3/4 h-[4px] w-72 bg-amber-300/90 rounded-full" style="animation-duration: 0.35s; animation-delay: 0.15s;"></div>
+    </div>
+
+    <!-- Parallax Mountains (Distant) -->
+    <div id="mountainsLayer" class="scene-physics absolute bottom-36 left-0 w-[350vw] h-96 pointer-events-none opacity-50">
+      <svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 3000 400" fill="none">
+        <path d="M0 400 L0 260 L250 160 L500 280 L800 130 L1100 290 L1400 110 L1750 270 L2100 140 L2500 290 L2800 150 L3000 220 L3000 400 Z" fill="#6f8594"/>
+        <path d="M150 400 L350 200 L600 300 L950 170 L1250 290 L1600 150 L1950 310 L2300 180 L2650 310 L3000 230 L3000 400 Z" fill="#587080" opacity="0.6"/>
+      </svg>
+    </div>
+
+    <!-- Parallax Hills & Pines (Midground) -->
+    <div id="hillsLayer" class="scene-physics absolute bottom-28 left-0 w-[350vw] h-52 pointer-events-none opacity-70">
+      <svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 3000 200" fill="none">
+        <path d="M0 200 C350 140 600 110 900 150 C1250 190 1500 130 1850 170 C2200 210 2550 140 2850 180 L3000 175 L3000 200 Z" fill="#8aa2b0"/>
+        <!-- Pine Trees -->
+        <g fill="#415967">
+          <polygon points="120,160 126,110 132,160"/>
+          <polygon points="128,162 135,115 142,162"/>
+          <polygon points="450,155 456,105 462,155"/>
+          <polygon points="820,145 827,95 834,145"/>
+          <polygon points="1350,155 1357,100 1364,155"/>
+          <polygon points="1880,160 1887,105 1894,160"/>
+          <polygon points="2390,150 2397,95 2404,150"/>
+          <polygon points="2800,160 2807,105 2814,160"/>
+        </g>
+      </svg>
+    </div>
+
+    <!-- Catenary Overhead Electric Wires & Gantries (Activates on Slide 5 & 6) -->
+    <div id="catenaryLayer" class="scene-physics absolute bottom-28 left-0 w-[350vw] h-60 pointer-events-none opacity-0 transition-opacity duration-1000 z-10">
+      <svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 3000 240" fill="none">
+        <!-- Power Wires -->
+        <line x1="0" y1="90" x2="3000" y2="90" stroke="#334155" stroke-width="2"/>
+        <line x1="0" y1="105" x2="3000" y2="105" stroke="#475569" stroke-width="3"/>
+        <!-- Gantries / Pylons -->
+        <g stroke="#334155" stroke-width="4" fill="none">
+          <path d="M 100 240 L 100 60 L 140 60 L 140 240 M 100 70 L 140 100 M 100 100 L 140 70"/>
+          <path d="M 600 240 L 600 60 L 640 60 L 640 240 M 600 70 L 640 100 M 600 100 L 640 70"/>
+          <path d="M 1100 240 L 1100 60 L 1140 60 L 1140 240 M 1100 70 L 1140 100 M 1100 100 L 1140 70"/>
+          <path d="M 1600 240 L 1600 60 L 1640 60 L 1640 240 M 1600 70 L 1640 100 M 1600 100 L 1640 70"/>
+          <path d="M 2100 240 L 2100 60 L 2140 60 L 2140 240 M 2100 70 L 2140 100 M 2100 100 L 2140 70"/>
+          <path d="M 2600 240 L 2600 60 L 2640 60 L 2640 240 M 2600 70 L 2640 100 M 2600 100 L 2640 70"/>
+        </g>
+      </svg>
+    </div>
+
+
+    <!-- ================= SLIDE CONTENT CONTAINERS ================= -->
+    <main class="relative z-30 flex-1 w-full max-w-6xl mx-auto px-6 pt-20 pb-44 flex items-center justify-center">
+
+      <!-- SLIDE 1: TITLE SLIDE -->
+      <section id="slide-1" class="slide-stage active">
+        <div class="w-full text-center max-w-4xl">
+          <div class="stagger-item inline-flex items-center gap-2.5 px-5 py-2 rounded-full bg-white/70 border border-slate-300 shadow-sm text-slate-800 text-xs font-bold mb-6 tracking-wide backdrop-blur-md">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            TRANSIT MODERNIZATION INITIATIVE
+          </div>
+          
+          <h1 class="stagger-item text-6xl sm:text-7xl lg:text-8xl font-black tracking-tight text-slate-900 leading-tight">
+            Background <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#ee4f38] to-orange-500">Presentation</span>
+          </h1>
+          
+          <div class="stagger-item mt-6 text-xl sm:text-2xl font-medium text-slate-600">
+            By: <span class="font-extrabold text-slate-900">Yash Shah, Daniel, James Hearn, John Connor</span>
+          </div>
+
+          <div class="stagger-item mt-10 flex flex-wrap items-center justify-center gap-4">
+            <button onclick="goToSlide(2)" class="px-8 py-4 rounded-2xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition-all shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 flex items-center gap-3 cursor-pointer group">
+              <span>Drive Forward</span>
+              <span class="group-hover:translate-x-1.5 transition-transform text-red-400">→</span>
+            </button>
+            <div class="text-xs text-slate-500 font-mono flex items-center gap-1.5">
+              <span>Press</span> <kbd class="px-2 py-1 rounded bg-white border border-slate-300 font-bold text-slate-700">Space</kbd> <span>or</span> <kbd class="px-2 py-1 rounded bg-white border border-slate-300 font-bold text-slate-700">→</kbd>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 2: THE PROBLEM -->
+      <section id="slide-2" class="slide-stage">
+        <div class="glass-deck rounded-3xl p-8 sm:p-12 w-full max-w-5xl">
+          <div class="stagger-item flex items-center justify-between pb-4 border-b border-slate-200">
+            <div>
+              <span class="text-xs font-mono font-bold uppercase tracking-widest text-red-600">CRITICAL BOTTLENECK</span>
+              <h2 class="text-3xl sm:text-4xl font-black text-slate-900 mt-1">
+                The Problem: US Passenger Train Lines
+              </h2>
+            </div>
+            <span class="px-3 py-1 rounded-full bg-red-100 text-red-700 text-xs font-mono font-bold">CRISIS 01</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+            <!-- Box 1: Expenses -->
+            <div class="stagger-item p-6 rounded-2xl bg-white/90 border border-slate-200/80 shadow-md flex flex-col justify-between hover:border-red-400 transition-colors">
+              <div>
+                <div class="flex items-center gap-2 text-red-600 font-bold text-xs uppercase tracking-wider">
+                  <span>📉</span> <span>Structural Deficit</span>
+                </div>
+                <h3 class="text-2xl font-black text-slate-900 mt-3 leading-snug">
+                  Expenses Exceed Revenue
+                </h3>
+                <p class="text-slate-600 text-sm mt-3 leading-relaxed">
+                  The network operates with widening operational deficits, severely limiting reinvestment in track maintenance, electrification, and passenger comfort.
+                </p>
+              </div>
+              <div class="mt-6 pt-3 border-t border-slate-100 font-mono text-xs text-slate-500 font-semibold">
+                Source: Goldman (2026)
+              </div>
+            </div>
+
+            <!-- Box 2: Delays -->
+            <div class="stagger-item p-6 rounded-2xl bg-white/90 border border-slate-200/80 shadow-md flex flex-col justify-between hover:border-amber-400 transition-colors">
+              <div>
+                <div class="flex items-center gap-2 text-amber-600 font-bold text-xs uppercase tracking-wider">
+                  <span>⏱️</span> <span>Punctuality Breakdown</span>
+                </div>
+                <h3 class="text-2xl font-black text-slate-900 mt-3 leading-snug">
+                  Chronic Delays for Passengers
+                </h3>
+                
+                <ul class="mt-4 space-y-3 text-xs sm:text-sm text-slate-700">
+                  <li class="flex items-start gap-2.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-red-500 mt-2 shrink-0"></span>
+                    <span><strong>Fails Standards:</strong> Long-distance trains consistently fail the <strong>80% on-time standard</strong> set by the Federal Railroad Administration.</span>
+                  </li>
+                  <li class="flex items-start gap-2.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-red-500 mt-2 shrink-0"></span>
+                    <span><strong>Illegal Freight Priority:</strong> Freight trains frequently take priority over Amtrak despite federal law explicitly prohibiting it.</span>
+                  </li>
+                  <li class="flex items-start gap-2.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-red-500 mt-2 shrink-0"></span>
+                    <span><strong>1.5 Years Wasted:</strong> Freight dispatching caused over <strong>850,000 minutes</strong> of passenger delay in a single year.</span>
+                  </li>
+                </ul>
+              </div>
+              <div class="mt-6 pt-3 border-t border-slate-100 font-mono text-xs text-slate-500 font-semibold">
+                Sources: Delayed by Freight (2025) & Amtrak Host Report Card (2024)
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 3: HISTORY OF THE PROBLEM -->
+      <section id="slide-3" class="slide-stage">
+        <div class="glass-deck rounded-3xl p-8 sm:p-12 w-full max-w-5xl">
+          <div class="stagger-item flex items-center justify-between pb-4 border-b border-slate-200">
+            <div>
+              <span class="text-xs font-mono font-bold uppercase tracking-widest text-sky-600">HISTORICAL CONTEXT</span>
+              <h2 class="text-3xl sm:text-4xl font-black text-slate-900 mt-1">
+                History of the Problem
+              </h2>
+            </div>
+            <span class="px-3 py-1 rounded-full bg-sky-100 text-sky-700 text-xs font-mono font-bold">TIMELINE 02</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-8">
+            <!-- Phase A -->
+            <div class="stagger-item p-6 rounded-2xl bg-white/90 border border-slate-200 shadow-md relative overflow-hidden group hover:shadow-xl transition-all">
+              <div class="absolute top-0 left-0 w-full h-1.5 bg-slate-800"></div>
+              <div class="w-10 h-10 rounded-xl bg-slate-900 text-white font-mono font-black flex items-center justify-center text-sm mb-4">
+                A
+              </div>
+              <div class="text-xs font-bold text-slate-500 uppercase font-mono">1950s Era</div>
+              <h3 class="text-lg font-black text-slate-900 mt-1">Post War Pivot</h3>
+              <ul class="mt-3 space-y-2 text-xs text-slate-600 leading-relaxed">
+                <li>• Post-WW2 federal policy heavily subsidized the Interstate Highway System and commercial aviation.</li>
+                <li>• Privately owned passenger rail could not compete with state-funded alternatives and plunged into severe financial loss.</li>
+              </ul>
+            </div>
+
+            <!-- Phase B -->
+            <div class="stagger-item p-6 rounded-2xl bg-white/90 border border-slate-200 shadow-md relative overflow-hidden group hover:shadow-xl transition-all">
+              <div class="absolute top-0 left-0 w-full h-1.5 bg-[#ee4f38]"></div>
+              <div class="w-10 h-10 rounded-xl bg-[#ee4f38] text-white font-mono font-black flex items-center justify-center text-sm mb-4">
+                B
+              </div>
+              <div class="text-xs font-bold text-red-500 uppercase font-mono">1971 Creation</div>
+              <h3 class="text-lg font-black text-slate-900 mt-1">The Birth of Amtrak®</h3>
+              <ul class="mt-3 space-y-2 text-xs text-slate-600 leading-relaxed">
+                <li>• Created by the federal government to save passenger rail from complete nationwide collapse.</li>
+                <li>• However, it was inaugurated with chronic underfunding, deferred maintenance, and an contradictory quasi-commercial mandate.</li>
+              </ul>
+            </div>
+
+            <!-- Phase C -->
+            <div class="stagger-item p-6 rounded-2xl bg-white/90 border border-slate-200 shadow-md relative overflow-hidden group hover:shadow-xl transition-all">
+              <div class="absolute top-0 left-0 w-full h-1.5 bg-amber-500"></div>
+              <div class="w-10 h-10 rounded-xl bg-amber-500 text-white font-mono font-black flex items-center justify-center text-sm mb-4">
+                C
+              </div>
+              <div class="text-xs font-bold text-amber-600 uppercase font-mono">Structural Trap</div>
+              <h3 class="text-lg font-black text-slate-900 mt-1">Freight Ownership</h3>
+              <ul class="mt-3 space-y-2 text-xs text-slate-600 leading-relaxed">
+                <li>• Unlike Europe or Asia, <strong>97% of the US rail network is privately owned by freight companies</strong>.</li>
+                <li>• Amtrak must rent these tracks, stranding passenger trains behind slower, miles-long cargo convoys.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 4: PAST ATTEMPTS AT SOLVING IT (OBSTACLE SCENE) -->
+      <section id="slide-4" class="slide-stage">
+        <div class="glass-deck rounded-3xl p-8 sm:p-12 w-full max-w-5xl">
+          <div class="stagger-item flex items-center justify-between pb-4 border-b border-slate-200">
+            <div>
+              <span class="text-xs font-mono font-bold uppercase tracking-widest text-amber-600">POLICY RETROSPECTIVE</span>
+              <h2 class="text-3xl sm:text-4xl font-black text-slate-900 mt-1">
+                Past Attempts at Solving It
+              </h2>
+            </div>
+            <span class="px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-mono font-bold">ANALYSIS 03</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-6 mt-8 items-center">
+            <div class="md:col-span-7 space-y-4">
+              <div class="stagger-item p-6 rounded-2xl bg-white border border-slate-200 shadow-sm">
+                <div class="text-xs font-mono uppercase text-slate-600 font-bold mb-1">1970 Federal Intervention</div>
+                <p class="text-base text-slate-800 font-medium leading-relaxed">
+                  "The creation of Amtrak by the US government in 1970 was the last major attempt at solving the problem."
+                </p>
+              </div>
+
+              <div class="stagger-item p-6 rounded-2xl bg-red-50 border border-red-200 text-red-950 shadow-sm">
+                <div class="text-xs font-mono uppercase text-red-600 font-bold mb-1">Current Reality</div>
+                <p class="text-base text-red-950 font-medium leading-relaxed">
+                  "Despite this, they are currently still facing financial losses and worsening service quality like its past counterparts."
+                </p>
+                <div class="mt-3 pt-2 border-t border-red-200/60 font-mono text-xs font-bold text-red-700">
+                  (Delaney, 2021)
+                </div>
+              </div>
+            </div>
+
+            <!-- Bottleneck Visual Widget -->
+            <div class="stagger-item md:col-span-5 bg-slate-900 text-white p-7 rounded-2xl shadow-2xl border border-slate-800">
+              <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+                <span class="text-xs font-mono text-amber-400 font-bold uppercase tracking-wider">⚠️ Current Signal Block</span>
+                <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></span>
+              </div>
+              
+              <div class="space-y-4 text-xs font-mono">
+                <div class="flex justify-between items-center">
+                  <span class="text-slate-400">Host Dispatching</span>
+                  <span class="text-red-400 font-bold">FREIGHT FIRST</span>
+                </div>
+                <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                  <div class="bg-red-500 h-full w-[97%]"></div>
+                </div>
+                <div class="flex justify-between text-[11px] text-slate-500">
+                  <span>Freight Track: 97%</span>
+                  <span>Passenger: 3%</span>
+                </div>
+                <p class="text-slate-400 text-xs font-sans mt-3 pt-3 border-t border-slate-800 leading-relaxed">
+                  Passenger rail cannot fix its schedule as long as private cargo operators control the switches.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 5: SOLUTIONS: INITIAL THOUGHTS (COMPLETED CONTENT) -->
+      <section id="slide-5" class="slide-stage">
+        <div class="glass-deck rounded-3xl p-8 sm:p-12 w-full max-w-5xl">
+          <div class="stagger-item flex items-center justify-between pb-4 border-b border-slate-200">
+            <div>
+              <span class="text-xs font-mono font-bold uppercase tracking-widest text-emerald-600">ACTIONABLE BLUEPRINT</span>
+              <h2 class="text-3xl sm:text-4xl font-black text-slate-900 mt-1">
+                Solutions: Initial Thoughts
+              </h2>
+            </div>
+            <span class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-mono font-bold">REFORM 04</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+            <!-- Solution 1 -->
+            <div class="stagger-item p-6 rounded-2xl bg-white border border-slate-200/90 shadow-md hover:border-emerald-500 transition-all group">
+              <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+                🛤️
+              </div>
+              <h3 class="text-lg font-black text-slate-900 group-hover:text-emerald-700 transition-colors">
+                Dedicated Passenger Corridors
+              </h3>
+              <p class="mt-3 text-xs sm:text-sm text-slate-600 leading-relaxed">
+                Establish dedicated passenger rail lines adjacent to existing freight infrastructure to eliminate traffic conflicts and scheduling delays.
+              </p>
+            </div>
+
+            <!-- Solution 2 -->
+            <div class="stagger-item p-6 rounded-2xl bg-white border border-slate-200/90 shadow-md hover:border-cyan-500 transition-all group">
+              <div class="w-12 h-12 rounded-2xl bg-cyan-100 text-cyan-700 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+                ⚡
+              </div>
+              <h3 class="text-lg font-black text-slate-900 group-hover:text-cyan-700 transition-colors">
+                Infrastructure Rehabilitation
+              </h3>
+              <p class="mt-3 text-xs sm:text-sm text-slate-600 leading-relaxed">
+                Modernize legacy tracks and signaling systems to support higher operating speeds and improve structural safety.
+              </p>
+            </div>
+
+            <!-- Solution 3 -->
+            <div class="stagger-item p-6 rounded-2xl bg-white border border-slate-200/90 shadow-md hover:border-indigo-500 transition-all group">
+              <div class="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+                🌉
+              </div>
+              <h3 class="text-lg font-black text-slate-900 group-hover:text-indigo-700 transition-colors">
+                Grade Separation
+              </h3>
+              <p class="mt-3 text-xs sm:text-sm text-slate-600 leading-relaxed">
+                Implement elevated or underground crossings at critical intersections to alleviate highway congestion caused by extended freight trains.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 6: FEASIBILITY OF THE SOLUTION (COMPLETED CONTENT) -->
+      <section id="slide-6" class="slide-stage">
+        <div class="glass-deck rounded-3xl p-8 sm:p-12 w-full max-w-5xl">
+          <div class="stagger-item flex items-center justify-between pb-4 border-b border-slate-200">
+            <div>
+              <span class="text-xs font-mono font-bold uppercase tracking-widest text-purple-600">VIABILITY VALIDATION</span>
+              <h2 class="text-3xl sm:text-4xl font-black text-slate-900 mt-1">
+                Feasibility of the Solution
+              </h2>
+            </div>
+            <span class="px-3 py-1 rounded-full bg-purple-100 text-purple-800 text-xs font-mono font-bold">VALIDATION 05</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+            <!-- Pillar 1 -->
+            <div class="stagger-item p-7 rounded-2xl bg-white border border-slate-200 shadow-md hover:border-purple-400 transition-all">
+              <div class="text-xs font-mono font-bold text-purple-600 uppercase">Pillar 01</div>
+              <h3 class="text-xl font-black text-slate-900 mt-2">
+                Proven Global Frameworks
+              </h3>
+              <p class="mt-3 text-xs sm:text-sm text-slate-600 leading-relaxed">
+                Utilize established high-speed rail models successfully deployed in countries like France, Japan, and China.
+              </p>
+              <div class="mt-5 flex gap-2">
+                <span class="px-2 py-1 bg-purple-50 text-purple-700 rounded text-[11px] font-bold">France TGV</span>
+                <span class="px-2 py-1 bg-purple-50 text-purple-700 rounded text-[11px] font-bold">Shinkansen</span>
+                <span class="px-2 py-1 bg-purple-50 text-purple-700 rounded text-[11px] font-bold">CR400</span>
+              </div>
+            </div>
+
+            <!-- Pillar 2 -->
+            <div class="stagger-item p-7 rounded-2xl bg-white border border-slate-200 shadow-md hover:border-purple-400 transition-all">
+              <div class="text-xs font-mono font-bold text-purple-600 uppercase">Pillar 02</div>
+              <h3 class="text-xl font-black text-slate-900 mt-2">
+                Optimized Resource Utilization
+              </h3>
+              <p class="mt-3 text-xs sm:text-sm text-slate-600 leading-relaxed">
+                Focus on upgrading existing right-of-ways to minimize land acquisition challenges and manage construction expenditures.
+              </p>
+              <div class="mt-5 text-[11px] font-mono text-emerald-600 font-bold flex items-center gap-1.5">
+                <span>✓ Reduces Eminent Domain Friction</span>
+              </div>
+            </div>
+
+            <!-- Pillar 3 -->
+            <div class="stagger-item p-7 rounded-2xl bg-white border border-slate-200 shadow-md hover:border-purple-400 transition-all">
+              <div class="text-xs font-mono font-bold text-purple-600 uppercase">Pillar 03</div>
+              <h3 class="text-xl font-black text-slate-900 mt-2">
+                Grounded Engineering
+              </h3>
+              <p class="mt-3 text-xs sm:text-sm text-slate-600 leading-relaxed">
+                Implement realistic, scalable technologies that rely on proven electrical rail systems rather than speculative concepts.
+              </p>
+              <div class="mt-5 text-[11px] font-mono text-blue-600 font-bold flex items-center gap-1.5">
+                <span>✓ Off-the-Shelf High Reliability</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 7: REFERENCES -->
+      <section id="slide-7" class="slide-stage">
+        <div class="glass-deck rounded-3xl p-8 sm:p-12 w-full max-w-5xl">
+          <div class="stagger-item flex items-center justify-between pb-4 border-b border-slate-200">
+            <div>
+              <span class="text-xs font-mono font-bold uppercase tracking-widest text-slate-500">SCHOLARLY CITATIONS</span>
+              <h2 class="text-3xl sm:text-4xl font-black text-slate-900 mt-1">
+                References
+              </h2>
+            </div>
+            <span class="px-3 py-1 rounded-full bg-slate-200 text-slate-800 text-xs font-mono font-bold">TERMINAL 06</span>
+          </div>
+
+          <div class="stagger-item space-y-3 mt-6 max-h-[46vh] overflow-y-auto pr-2 text-xs text-slate-700 leading-relaxed">
+            <div class="p-4 rounded-xl bg-white border border-slate-200 hover:border-sky-400 transition-colors">
+              <strong>America on track: Passenger rail in U.S. history</strong> (2025, May 6). National Archives Foundation.
+              <a href="https://archivesfoundation.org/newsletter/america-on-track/" target="_blank" class="block text-sky-600 hover:underline mt-1 font-mono text-[11px]">
+                https://archivesfoundation.org/newsletter/america-on-track/
+              </a>
+            </div>
+
+            <div class="p-4 rounded-xl bg-white border border-slate-200 hover:border-sky-400 transition-colors">
+              <strong>Amtrak Host Railroad Report Card CY 2024.</strong> (n.d.). Amtrak. Retrieved October 28, 2026, from 
+              <a href="https://www.amtrak.com/content/dam/projects/dotcom/english/public/documents/corporate/HostRailroadReports/Amtrak-2024-Host-Railroad-Report-Card.pdf" target="_blank" class="block text-sky-600 hover:underline mt-1 font-mono text-[11px] truncate">
+                https://www.amtrak.com/corporate/HostRailroadReports/Amtrak-2024-Host-Railroad-Report-Card.pdf
+              </a>
+            </div>
+
+            <div class="p-4 rounded-xl bg-white border border-slate-200 hover:border-sky-400 transition-colors">
+              <strong>Delaney, B. (2021).</strong> Congress Creates Amtrak to Save Passenger Rail Service. In Research Starters. EBSCO.
+              <a href="https://www.ebsco.com/research-starters/history/congress-creates-amtrak-save-passenger-rail-service/" target="_blank" class="block text-sky-600 hover:underline mt-1 font-mono text-[11px]">
+                https://www.ebsco.com/research-starters/history/congress-creates-amtrak-save-passenger-rail-service/
+              </a>
+            </div>
+
+            <div class="p-4 rounded-xl bg-white border border-slate-200 hover:border-sky-400 transition-colors">
+              <strong>Delayed by Freight: Measuring On-Time Performance Across Our Network.</strong> (2025, June). Amtrak.
+              <a href="https://www.amtrak.com/on-time-performance" target="_blank" class="block text-sky-600 hover:underline mt-1 font-mono text-[11px]">
+                https://www.amtrak.com/on-time-performance
+              </a>
+            </div>
+
+            <div class="p-4 rounded-xl bg-white border border-slate-200 hover:border-sky-400 transition-colors">
+              <strong>Goldman, B. (2026, September 9).</strong> Surface Transportation Reauthorization: Passenger and Freight Rail Issues. Congress.
+              <a href="https://www.congress.gov/crs-product/R48881" target="_blank" class="block text-sky-600 hover:underline mt-1 font-mono text-[11px]">
+                https://www.congress.gov/crs-product/R48881
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+
+    <!-- ================= THE KINETIC TRAIN & VIADUCT LAYER ================= -->
+    <div class="relative w-full h-40 z-30 pointer-events-none">
+
+      <!-- PARALLEL FREIGHT TRAIN (Appears only on Slide 4 - The Bottleneck) -->
+      <div id="freightTrainActor" class="train-physics absolute bottom-[58px] pointer-events-none transition-all duration-1000 opacity-0" style="left: -1200px;">
+        <svg class="h-20 w-auto filter drop-shadow-2xl" viewBox="0 0 1200 120" fill="none">
+          <!-- Heavy Diesel Locomotive -->
+          <g>
+            <rect x="0" y="30" width="280" height="75" rx="4" fill="#3b4252" stroke="#1f232a" stroke-width="4"/>
+            <rect x="0" y="75" width="280" height="12" fill="#d08770"/>
+            <rect x="30" y="42" width="40" height="22" rx="2" fill="#e5e9f0" stroke="#1f232a" stroke-width="2"/>
+            <text x="100" y="65" font-family="monospace" font-weight="bold" font-size="20" fill="#eceff4">BNSF 8421</text>
+            <circle cx="50" cy="106" r="13" fill="#2e3440" stroke="#88c0d0" stroke-width="3"/>
+            <circle cx="95" cy="106" r="13" fill="#2e3440" stroke="#88c0d0" stroke-width="3"/>
+            <circle cx="190" cy="106" r="13" fill="#2e3440" stroke="#88c0d0" stroke-width="3"/>
+            <circle cx="235" cy="106" r="13" fill="#2e3440" stroke="#88c0d0" stroke-width="3"/>
+          </g>
+          <!-- Cargo Container 1 -->
+          <g transform="translate(300, 0)">
+            <rect x="0" y="20" width="260" height="85" rx="3" fill="#bf616a" stroke="#1f232a" stroke-width="3"/>
+            <text x="50" y="65" font-family="sans-serif" font-weight="black" font-size="24" fill="#ffffff" opacity="0.7">MAERSK</text>
+            <circle cx="45" cy="106" r="13" fill="#2e3440"/>
+            <circle cx="215" cy="106" r="13" fill="#2e3440"/>
+          </g>
+          <!-- Cargo Container 2 -->
+          <g transform="translate(580, 0)">
+            <rect x="0" y="20" width="260" height="85" rx="3" fill="#5e81ac" stroke="#1f232a" stroke-width="3"/>
+            <text x="60" y="65" font-family="sans-serif" font-weight="black" font-size="24" fill="#ffffff" opacity="0.7">COSCO</text>
+            <circle cx="45" cy="106" r="13" fill="#2e3440"/>
+            <circle cx="215" cy="106" r="13" fill="#2e3440"/>
+          </g>
+          <!-- Cargo Container 3 -->
+          <g transform="translate(860, 0)">
+            <rect x="0" y="20" width="260" height="85" rx="3" fill="#ebcb8b" stroke="#1f232a" stroke-width="3"/>
+            <text x="50" y="65" font-family="sans-serif" font-weight="black" font-size="24" fill="#2e3440" opacity="0.7">ONE LINE</text>
+            <circle cx="45" cy="106" r="13" fill="#2e3440"/>
+            <circle cx="215" cy="106" r="13" fill="#2e3440"/>
+          </g>
+        </svg>
+      </div>
+
+      <!-- THE HERO HIGH SPEED TRAIN (Exact Art Style of Slide 1) -->
+      <div id="trainActor" class="train-physics absolute bottom-[46px]" style="left: -100px; transform: scale(1.15);">
+        
+        <!-- Pantograph Spark FX (on high speed mode) -->
+        <div id="pantographSparks" class="pantograph-spark absolute -top-4 right-[280px] w-4 h-4 bg-cyan-300 rounded-full blur-[2px] opacity-0 pointer-events-none"></div>
+
+        <svg class="h-20 w-auto filter drop-shadow-2xl" viewBox="0 0 950 140" fill="none">
+          <!-- Pantograph (Overhead electric collector) -->
+          <g id="pantographArm" class="opacity-0 transition-opacity duration-500" stroke="#334155" stroke-width="3">
+            <line x1="680" y1="40" x2="695" y2="15"/>
+            <line x1="695" y1="15" x2="730" y2="15"/>
+            <line x1="730" y1="15" x2="745" y2="40"/>
+            <line x1="685" y1="14" x2="740" y2="14" stroke="#0284c7" stroke-width="4"/>
+          </g>
+
+          <!-- Coach 2 (Rear Car) -->
+          <g id="coach2">
+            <rect x="0" y="40" width="260" height="75" rx="8" fill="#e8edf1" stroke="#2c3e50" stroke-width="4"/>
+            <rect x="0" y="90" width="260" height="14" fill="#ee4f38"/>
+            <line x1="0" y1="108" x2="260" y2="108" stroke="#1f2d3d" stroke-width="3"/>
+            <!-- Windows Coach 2 -->
+            <rect x="18" y="52" width="60" height="24" rx="4" fill="#00838f" stroke="#2c3e50" stroke-width="3"/>
+            <rect x="94" y="52" width="60" height="24" rx="4" fill="#00838f" stroke="#2c3e50" stroke-width="3"/>
+            <rect x="170" y="52" width="60" height="24" rx="4" fill="#00838f" stroke="#2c3e50" stroke-width="3"/>
+            <!-- Bogies & Wheels -->
+            <circle class="wheel" cx="50" cy="116" r="14" fill="#37474f" stroke="#cfd8dc" stroke-width="4"/>
+            <circle class="wheel" cx="95" cy="116" r="14" fill="#37474f" stroke="#cfd8dc" stroke-width="4"/>
+            <circle class="wheel" cx="170" cy="116" r="14" fill="#37474f" stroke="#cfd8dc" stroke-width="4"/>
+            <circle class="wheel" cx="215" cy="116" r="14" fill="#37474f" stroke="#cfd8dc" stroke-width="4"/>
+          </g>
+
+          <!-- Coach 1 (Center Car) -->
+          <g id="coach1">
+            <rect x="270" y="40" width="270" height="75" rx="6" fill="#f8fafc" stroke="#2c3e50" stroke-width="4"/>
+            <rect x="270" y="90" width="270" height="14" fill="#ee4f38"/>
+            <line x1="270" y1="108" x2="540" y2="108" stroke="#1f2d3d" stroke-width="3"/>
+            <!-- Windows Coach 1 -->
+            <rect x="290" y="52" width="62" height="24" rx="4" fill="#00838f" stroke="#2c3e50" stroke-width="3"/>
+            <rect x="372" y="52" width="62" height="24" rx="4" fill="#00838f" stroke="#2c3e50" stroke-width="3"/>
+            <rect x="454" y="52" width="62" height="24" rx="4" fill="#00838f" stroke="#2c3e50" stroke-width="3"/>
+            <!-- Wheels -->
+            <circle class="wheel" cx="320" cy="116" r="14" fill="#37474f" stroke="#cfd8dc" stroke-width="4"/>
+            <circle class="wheel" cx="365" cy="116" r="14" fill="#37474f" stroke="#cfd8dc" stroke-width="4"/>
+            <circle class="wheel" cx="445" cy="116" r="14" fill="#37474f" stroke="#cfd8dc" stroke-width="4"/>
+            <circle class="wheel" cx="490" cy="116" r="14" fill="#37474f" stroke="#cfd8dc" stroke-width="4"/>
+          </g>
+
+          <!-- Locomotive / Head Nose -->
+          <g id="locomotive">
+            <path d="M550 115 L550 40 L720 40 Q840 45 920 100 Q935 110 930 115 Z" fill="#ffffff" stroke="#2c3e50" stroke-width="4"/>
+            <!-- Red Speed Accent Stripe -->
+            <path d="M550 90 L810 90 Q870 95 915 110 L890 115 L550 115 Z" fill="#ee4f38"/>
+            <!-- Cockpit Windshield -->
+            <path d="M720 50 L810 50 Q850 56 875 75 L760 75 Z" fill="#00838f" stroke="#2c3e50" stroke-width="3"/>
+            <!-- Cabin Window -->
+            <rect x="575" y="52" width="60" height="24" rx="4" fill="#00838f" stroke="#2c3e50" stroke-width="3"/>
+            <!-- High-Power Beam -->
+            <polygon id="headlightBeam" points="930,105 1350,60 1350,150 930,118" fill="url(#beamGlow)" opacity="0.6"/>
+            <!-- Wheels -->
+            <circle class="wheel" cx="600" cy="116" r="14" fill="#37474f" stroke="#cfd8dc" stroke-width="4"/>
+            <circle class="wheel" cx="645" cy="116" r="14" fill="#37474f" stroke="#cfd8dc" stroke-width="4"/>
+            <circle class="wheel" cx="770" cy="116" r="14" fill="#37474f" stroke="#cfd8dc" stroke-width="4"/>
+            <circle class="wheel" cx="815" cy="116" r="14" fill="#37474f" stroke="#cfd8dc" stroke-width="4"/>
+          </g>
+
+          <defs>
+            <linearGradient id="beamGlow" x1="0%" y1="50%" x2="100%" y2="50%">
+              <stop offset="0%" stop-color="#fffb91" stop-opacity="0.95"/>
+              <stop offset="50%" stop-color="#fffb91" stop-opacity="0.25"/>
+              <stop offset="100%" stop-color="#fffb91" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+
+      <!-- VIADUCT / TRACK ARCH BRIDGE -->
+      <div class="absolute bottom-0 left-0 w-full h-16 pointer-events-none">
+        <svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 1600 70" fill="none">
+          <rect x="0" y="0" width="1600" height="14" fill="#889da9"/>
+          <line x1="0" y1="2" x2="1600" y2="2" stroke="#5b717d" stroke-width="2"/>
+          <g fill="#9cb0bc">
+            <path d="M 0 14 L 0 70 L 40 70 L 40 45 C 50 30 70 30 80 45 L 80 70 L 120 70 L 120 45 C 130 30 150 30 160 45 L 160 70 L 200 70 L 200 45 C 210 30 230 30 240 45 L 240 70 L 280 70 L 280 45 C 290 30 310 30 320 45 L 320 70 L 360 70 L 360 45 C 370 30 390 30 400 45 L 400 70 L 440 70 L 440 45 C 450 30 470 30 480 45 L 480 70 L 520 70 L 520 45 C 530 30 550 30 560 45 L 560 70 L 600 70 L 600 45 C 610 30 630 30 640 45 L 640 70 L 680 70 L 680 45 C 690 30 710 30 720 45 L 720 70 L 760 70 L 760 45 C 770 30 790 30 800 45 L 800 70 L 840 70 L 840 45 C 850 30 870 30 880 45 L 880 70 L 920 70 L 920 45 C 930 30 950 30 960 45 L 960 70 L 1000 70 L 1000 45 C 1010 30 1030 30 1040 45 L 1040 70 L 1080 70 L 1080 45 C 1090 30 1110 30 1120 45 L 1120 70 L 1160 70 L 1160 45 C 1170 30 1190 30 1200 45 L 1200 70 L 1240 70 L 1240 45 C 1250 30 1270 30 1280 45 L 1280 70 L 1320 70 L 1320 45 C 1330 30 1350 30 1360 45 L 1360 70 L 1400 70 L 1400 45 C 1410 30 1430 30 1440 45 L 1440 70 L 1480 70 L 1480 45 C 1490 30 1510 30 1520 45 L 1520 70 L 1560 70 L 1560 45 C 1570 30 1590 30 1600 45 L 1600 70 Z"/>
+          </g>
+          <!-- Balusters -->
+          <g fill="#7b8e9b">
+            <circle cx="60" cy="18" r="4"/><circle cx="140" cy="18" r="4"/><circle cx="220" cy="18" r="4"/><circle cx="300" cy="18" r="4"/>
+            <circle cx="380" cy="18" r="4"/><circle cx="460" cy="18" r="4"/><circle cx="540" cy="18" r="4"/><circle cx="620" cy="18" r="4"/>
+            <circle cx="700" cy="18" r="4"/><circle cx="780" cy="18" r="4"/><circle cx="860" cy="18" r="4"/><circle cx="940" cy="18" r="4"/>
+            <circle cx="1020" cy="18" r="4"/><circle cx="1100" cy="18" r="4"/><circle cx="1180" cy="18" r="4"/><circle cx="1260" cy="18" r="4"/>
+            <circle cx="1340" cy="18" r="4"/><circle cx="1420" cy="18" r="4"/><circle cx="1500" cy="18" r="4"/><circle cx="1580" cy="18" r="4"/>
+          </g>
+        </svg>
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- ================= BOTTOM INTERACTIVE ROUTE MAP & NAV ================= -->
+  <footer class="relative z-50 bg-slate-950/90 border-t border-slate-800/80 px-6 py-3.5 flex items-center justify-between backdrop-blur-xl">
+    
+    <!-- Waypoint Progress Timeline / Route Map -->
+    <div class="flex items-center gap-2 sm:gap-4 overflow-x-auto py-1">
+      <div class="flex items-center gap-1 sm:gap-3" id="stationTimeline">
+        <!-- Generated by JS with station stops -->
+      </div>
+    </div>
+
+    <!-- Next / Prev Controls -->
+    <div class="flex items-center gap-3 shrink-0">
+      <span class="text-xs font-mono text-slate-400 font-bold hidden sm:inline" id="slideIndexDisplay">01 / 07</span>
+      
+      <button id="prevBtn" onclick="prevSlide()" class="px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-white font-semibold text-xs flex items-center gap-1.5 transition-all disabled:opacity-30 disabled:pointer-events-none cursor-pointer">
+        <span>← Prev</span>
+      </button>
+      
+      <button id="nextBtn" onclick="nextSlide()" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-[#ee4f38] hover:from-red-500 hover:to-orange-500 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-lg shadow-red-600/25 disabled:opacity-30 disabled:pointer-events-none cursor-pointer">
+        <span>Next Station</span>
+        <span>→</span>
+      </button>
+    </div>
+  </footer>
+
+
+  <!-- ================= PRESENTER NOTES MODAL ================= -->
+  <div id="notesModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-xl w-full p-6 text-white shadow-2xl relative">
+      <button onclick="closeNotes()" class="absolute top-5 right-5 w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition cursor-pointer">✕</button>
+      <div class="text-xs font-mono text-cyan-400 font-bold uppercase mb-1">Speaker Briefing</div>
+      <h3 class="text-xl font-bold" id="notesModalTitle">Slide Notes</h3>
+      <div class="mt-4 p-4 rounded-xl bg-slate-800/70 border border-slate-700/80 text-sm text-slate-300 leading-relaxed font-sans" id="notesContent">
+        <!-- Dynamically injected -->
+      </div>
+      <div class="mt-6 flex justify-end">
+        <button onclick="closeNotes()" class="px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 font-bold text-xs text-white transition cursor-pointer">
+          Got It
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ================= KINETIC CONTROLLER SCRIPT ================= -->
+  <script>
+    const totalSlides = 7;
+    let currentSlide = 1;
+    let audioEnabled = false;
+    let audioCtx = null;
+
+    // Station stops metadata
+    const stations = [
+      { id: 1, name: "Departure", code: "DEP", title: "Background Presentation" },
+      { id: 2, name: "Bottleneck", code: "BTN", title: "The Problem" },
+      { id: 3, name: "Timeline", code: "HIS", title: "History of the Problem" },
+      { id: 4, name: "Freight Block", code: "BLK", title: "Past Attempts" },
+      { id: 5, name: "New Corridor", code: "HSR", title: "Solutions: Initial Thoughts" },
+      { id: 6, name: "Global Tech", code: "ENG", title: "Feasibility of the Solution" },
+      { id: 7, name: "Terminal", code: "ARR", title: "References" }
+    ];
+
+    // Slide waypoints for continuous kinetic movement
+    const waypoints = {
+      1: {
+        trainLeft: '-20px',
+        trainScale: 1.15,
+        speed: 0,
+        corridor: 'DEP // UNION TERMINAL',
+        sky: 'linear-gradient(to bottom, #9bb1be, #c6d7e2, #e4edf2)',
+        mountainsX: '0vw',
+        hillsX: '0vw',
+        catenary: false,
+        freightVisible: false,
+        sparks: false,
+        notes: "Welcome the audience and introduce the team: Yash Shah, Daniel, James Hearn, John Connor. Highlight that this study explores why US passenger rail lags behind the rest of the world and the concrete engineering steps needed to solve it."
+      },
+      2: {
+        trainLeft: 'calc(45vw - 420px)',
+        trainScale: 1.05,
+        speed: 85,
+        corridor: 'CRISIS // SHARED FREIGHT CORRIDOR',
+        sky: 'linear-gradient(to bottom, #8ea6b5, #b8cad6, #dae5ec)',
+        mountainsX: '-25vw',
+        hillsX: '-45vw',
+        catenary: false,
+        freightVisible: false,
+        sparks: false,
+        notes: "Emphasize Goldman (2026): passenger revenue does not cover costs. Highlight the 850,000 minutes of passenger delay caused by freight trains taking illegal priority on shared tracks."
+      },
+      3: {
+        trainLeft: 'calc(70vw - 420px)',
+        trainScale: 1.0,
+        speed: 110,
+        corridor: 'TIMELINE // 1950s - 1970s RETROSPECTIVE',
+        sky: 'linear-gradient(to bottom, #bda38b, #dfd0c0, #f2ece4)', // vintage sepia tones
+        mountainsX: '-55vw',
+        hillsX: '-95vw',
+        catenary: false,
+        freightVisible: false,
+        sparks: false,
+        notes: "Explain the Post-WWII pivot to highways and aviation. In 1971 Amtrak was created as a safety net, but was burdened with a mandate to be profitable while owning only 3% of its tracks."
+      },
+      4: {
+        trainLeft: 'calc(25vw - 420px)', // Train slowed and pulled over!
+        trainScale: 1.1,
+        speed: 15, // Severe slowdown
+        corridor: '⚠️ STOPPED // BEHIND FREIGHT CONVOY',
+        sky: 'linear-gradient(to bottom, #5d6d7e, #85929e, #aeb6bf)', // stormy overcast
+        mountainsX: '-85vw',
+        hillsX: '-135vw',
+        catenary: false,
+        freightVisible: true,
+        sparks: false,
+        notes: "Point out Delaney (2021). The 1970 reform was the last major intervention, but Amtrak remains trapped as a secondary tenant on private freight lines, resulting in recurring losses."
+      },
+      5: {
+        trainLeft: 'calc(65vw - 420px)', // Train switches onto dedicated high-speed line
+        trainScale: 1.2,
+        speed: 175,
+        corridor: '⚡ DEDICATED RIGHT-OF-WAY // 175 MPH',
+        sky: 'linear-gradient(to bottom, #0284c7, #38bdf8, #bae6fd)', // brilliant modern blue
+        mountainsX: '-115vw',
+        hillsX: '-185vw',
+        catenary: true,
+        freightVisible: false,
+        sparks: true,
+        notes: "Walk through the three pillars: (1) Dedicated passenger lines away from freight, (2) Rehabilitation of legacy tracks/signaling, and (3) Grade separation to eliminate road crossings."
+      },
+      6: {
+        trainLeft: 'calc(85vw - 420px)',
+        trainScale: 1.15,
+        speed: 220,
+        corridor: '⚡ FULL HIGH SPEED // 220 MPH CRUISE',
+        sky: 'linear-gradient(to bottom, #4f46e5, #818cf8, #c7d2fe)', // high-velocity purple sky
+        mountainsX: '-145vw',
+        hillsX: '-235vw',
+        catenary: true,
+        freightVisible: false,
+        sparks: true,
+        notes: "Defend feasibility: We don't need experimental tech. France, Japan, and China have proven high-speed electrical rail for decades. Using existing right-of-ways avoids costly land disputes."
+      },
+      7: {
+        trainLeft: 'calc(50vw - 320px)',
+        trainScale: 1.0,
+        speed: 0,
+        corridor: 'TERMINAL ARRIVAL // METROPOLIS HUB',
+        sky: 'linear-gradient(to bottom, #1e293b, #334155, #64748b)', // evening station lighting
+        mountainsX: '-170vw',
+        hillsX: '-280vw',
+        catenary: true,
+        freightVisible: false,
+        sparks: false,
+        notes: "Conclude with questions and review the official references from Congress (Goldman 2026), Amtrak Host Reports, and the National Archives."
+      }
+    };
+
+    // DOM references
+    const trainActor = document.getElementById('trainActor');
+    const freightTrainActor = document.getElementById('freightTrainActor');
+    const mountainsLayer = document.getElementById('mountainsLayer');
+    const hillsLayer = document.getElementById('hillsLayer');
+    const catenaryLayer = document.getElementById('catenaryLayer');
+    const skyDome = document.getElementById('skyDome');
+    const speedStreaksLayer = document.getElementById('speedStreaksLayer');
+    const speedValue = document.getElementById('speedValue');
+    const speedBar = document.getElementById('speedBar');
+    const corridorBadge = document.getElementById('corridorBadge');
+    const headerTitle = document.getElementById('headerTitle');
+    const slideIndexDisplay = document.getElementById('slideIndexDisplay');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const pantographArm = document.getElementById('pantographArm');
+    const pantographSparks = document.getElementById('pantographSparks');
+    const stationTimeline = document.getElementById('stationTimeline');
+
+    // Render Station Timeline Waypoints
+    stations.forEach(st => {
+      const btn = document.createElement('button');
+      btn.className = `flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[11px] font-mono transition-all cursor-pointer ${st.id === 1 ? 'bg-red-500/20 border-red-500/80 text-white font-bold' : 'border-slate-800 text-slate-400 hover:text-slate-200'}`;
+      btn.id = `station-btn-${st.id}`;
+      btn.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${st.id === 1 ? 'bg-red-500' : 'bg-slate-600'}"></span><span>${st.code}</span>`;
+      btn.onclick = () => goToSlide(st.id);
+      stationTimeline.appendChild(btn);
+    });
+
+    // Sound FX Synthesis (Web Audio API)
+    function playTransitSound(type = 'woosh') {
+      if (!audioEnabled) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        if (type === 'horn') {
+          // Double tone train chime
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(311.13, audioCtx.currentTime); // D#4
+          gain.gain.setValueAtTime(0.01, audioCtx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.1);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.2);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 1.25);
+        } else {
+          // Accelerating / Cruising whoosh
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(380, audioCtx.currentTime + 0.4);
+          osc.frequency.exponentialRampToValueAtTime(140, audioCtx.currentTime + 1.0);
+          gain.gain.setValueAtTime(0.01, audioCtx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 0.3);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.0);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 1.05);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    document.getElementById('soundBtn').onclick = () => {
+      audioEnabled = !audioEnabled;
+      document.getElementById('soundIcon').textContent = audioEnabled ? '🔊' : '🔇';
+      document.getElementById('soundLabel').textContent = audioEnabled ? 'Sound On' : 'Muted';
+      document.getElementById('soundBtn').classList.toggle('border-cyan-500', audioEnabled);
+      document.getElementById('soundBtn').classList.toggle('text-cyan-400', audioEnabled);
+      if (audioEnabled) playTransitSound('horn');
+    };
+
+    // GO TO SLIDE LOGIC
+    function goToSlide(target) {
+      if (target < 1 || target > totalSlides || target === currentSlide) return;
+      currentSlide = target;
+      const wp = waypoints[currentSlide];
+
+      // Play Audio
+      playTransitSound(currentSlide === 5 || currentSlide === 6 ? 'horn' : 'woosh');
+
+      // Update Slides Content
+      for (let i = 1; i <= totalSlides; i++) {
+        const s = document.getElementById(`slide-${i}`);
+        if (s) {
+          if (i === currentSlide) {
+            s.classList.add('active');
+          } else {
+            s.classList.remove('active');
+          }
+        }
+      }
+
+      // Choreograph Train Actor
+      trainActor.style.left = wp.trainLeft;
+      trainActor.style.transform = `scale(${wp.trainScale})`;
+
+      // Catenary overhead power
+      catenaryLayer.style.opacity = wp.catenary ? '1' : '0';
+      pantographArm.style.opacity = wp.catenary ? '1' : '0';
+      pantographSparks.style.opacity = wp.sparks ? '1' : '0';
+
+      // Parallax Shifts
+      mountainsLayer.style.transform = `translateX(${wp.mountainsX})`;
+      hillsLayer.style.transform = `translateX(${wp.hillsX})`;
+      catenaryLayer.style.transform = `translateX(${wp.hillsX})`;
+      skyDome.style.background = wp.sky;
+
+      // Freight Train obstacle handling on Slide 4
+      if (wp.freightVisible) {
+        freightTrainActor.style.opacity = '1';
+        freightTrainActor.style.left = 'calc(50vw - 500px)';
+      } else {
+        freightTrainActor.style.opacity = '0';
+        freightTrainActor.style.left = '-1200px';
+      }
+
+      // Speed effects
+      if (wp.speed > 100) {
+        speedStreaksLayer.style.opacity = '1';
+        trainActor.classList.add('train-cruising');
+      } else if (wp.speed > 0) {
+        speedStreaksLayer.style.opacity = '0.4';
+        trainActor.classList.add('train-cruising');
+      } else {
+        speedStreaksLayer.style.opacity = '0';
+        trainActor.classList.remove('train-cruising');
+      }
+
+      // Telemetry HUD
+      speedValue.textContent = wp.speed;
+      speedBar.style.width = `${(wp.speed / 240) * 100}%`;
+      corridorBadge.textContent = wp.corridor;
+      headerTitle.textContent = stations[currentSlide - 1].title;
+      slideIndexDisplay.textContent = `0${currentSlide} / 0${totalSlides}`;
+
+      // Update Waypoints
+      stations.forEach(st => {
+        const btn = document.getElementById(`station-btn-${st.id}`);
+        if (btn) {
+          if (st.id === currentSlide) {
+            btn.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-red-500 bg-red-500/20 text-white font-bold text-[11px] font-mono shadow-sm";
+            btn.querySelector('span:first-child').className = "w-1.5 h-1.5 rounded-full bg-red-500";
+          } else {
+            btn.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-800 text-slate-400 hover:text-slate-200 text-[11px] font-mono";
+            btn.querySelector('span:first-child').className = "w-1.5 h-1.5 rounded-full bg-slate-600";
+          }
+        }
+      });
+
+      prevBtn.disabled = currentSlide === 1;
+      nextBtn.disabled = currentSlide === totalSlides;
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides) goToSlide(currentSlide + 1);
+    }
+    function prevSlide() {
+      if (currentSlide > 1) goToSlide(currentSlide - 1);
+    }
+
+    // Keyboard Controls
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        prevSlide();
+      } else if (e.key.toLowerCase() === 'f') {
+        toggleFullscreen();
+      } else if (e.key.toLowerCase() === 'n') {
+        toggleNotes();
+      } else if (e.key === 'Escape') {
+        closeNotes();
+      }
+    });
+
+    // Fullscreen
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        if (document.exitFullscreen) document.exitFullscreen();
+      }
+    }
+    document.getElementById('fullscreenBtn').onclick = toggleFullscreen;
+
+    // Speaker Notes Modal
+    function toggleNotes() {
+      const modal = document.getElementById('notesModal');
+      document.getElementById('notesModalTitle').textContent = `Slide 0${currentSlide}: ${stations[currentSlide - 1].title}`;
+      document.getElementById('notesContent').textContent = waypoints[currentSlide].notes;
+      modal.classList.remove('opacity-0', 'pointer-events-none');
+    }
+    function closeNotes() {
+      const modal = document.getElementById('notesModal');
+      modal.classList.add('opacity-0', 'pointer-events-none');
+    }
+    document.getElementById('notesBtn').onclick = toggleNotes;
+
+    // Initial Trigger
+    goToSlide(1);
+  </script>
+</body>
+</html>
